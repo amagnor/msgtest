@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "462295731389",
+    "project_id": "msgtest-c82c8",
+    "storage_bucket": "msgtest-c82c8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:462295731389:android:90aa27964ebd34cea2fbd4",
+        "android_client_info": {
+          "package_name": "com.example.msgtest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWISqAel0E1mIChICHCdLqlFSTwXbxuaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
