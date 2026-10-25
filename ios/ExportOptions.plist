@@ -14,8 +14,8 @@
     <string>5236CM6C65</string>
     <key>provisioningProfiles</key>
     <dict>
-        <key>de.magnorberlin.fitness</key>
-        <string>First_App_Profile</string>
+        <key>de.magnorberlin.msgtest</key>
+        <string>App_Profile</string>
     </dict>
 </dict>
 </plist>

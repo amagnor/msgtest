@@ -9,7 +9,8 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io' show Platform;
-import 'dart:typed_data' show Float32List, Float64List, Int32List, Int64List, TypedData;
+import 'dart:typed_data'
+    show Float32List, Float64List, Int32List, Int64List, TypedData;
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
@@ -55,7 +56,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed.every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -120,7 +123,9 @@ class _PigeonFfiCodec {
     } else if (NSString.isA(value)) {
       return NSString.as(value).toDartString();
     } else if (ffi_bridge.MessagesPigeonTypedData.isA(value)) {
-      return _getValueFromPigeonTypedData(value as ffi_bridge.MessagesPigeonTypedData);
+      return _getValueFromPigeonTypedData(
+        value as ffi_bridge.MessagesPigeonTypedData,
+      );
     } else if (NSArray.isA(value)) {
       final NSArray array = NSArray.as(value);
       final List<Object?> res = <Object?>[];
@@ -134,11 +139,17 @@ class _PigeonFfiCodec {
       final Map<Object?, Object?> res = <Object?, Object?>{};
       for (int i = 0; i < keys.count; i++) {
         final ObjCObject key = keys.objectAtIndex(i);
-        res[readValue(key, type, type2)] = readValue(dict.objectForKey(key), type, type2);
+        res[readValue(key, type, type2)] = readValue(
+          dict.objectForKey(key),
+          type,
+          type2,
+        );
       }
       return res;
     } else if (ffi_bridge.MessagesNumberWrapper.isA(value)) {
-      return _convertNumberWrapperToDart(ffi_bridge.MessagesNumberWrapper.as(value));
+      return _convertNumberWrapperToDart(
+        ffi_bridge.MessagesNumberWrapper.as(value),
+      );
     } else if (ffi_bridge.SharedPreferencesPigeonOptionsBridge.isA(value)) {
       return SharedPreferencesPigeonOptions.fromFfi(
         ffi_bridge.SharedPreferencesPigeonOptionsBridge.as(value),
@@ -148,9 +159,13 @@ class _PigeonFfiCodec {
     }
   }
 
-  static T writeValue<T extends ObjCObject?>(Object? value, {bool generic = false}) {
+  static T writeValue<T extends ObjCObject?>(
+    Object? value, {
+    bool generic = false,
+  }) {
     if (value == null) {
-      if (_isTypeOrNullableType<T>(ObjCObject) || _isTypeOrNullableType<T>(NSObject)) {
+      if (_isTypeOrNullableType<T>(ObjCObject) ||
+          _isTypeOrNullableType<T>(NSObject)) {
         return ffi_bridge.MessagesPigeonInternalNull() as T;
       }
       return null as T;
@@ -161,11 +176,15 @@ class _PigeonFfiCodec {
               : NSNumber.alloc().initWithLong(value ? 1 : 0))
           as T;
     } else if (value is double) {
-      return (generic ? _convertToFfiNumberWrapper(value) : NSNumber.alloc().initWithDouble(value))
+      return (generic
+              ? _convertToFfiNumberWrapper(value)
+              : NSNumber.alloc().initWithDouble(value))
           as T;
       // ignore: avoid_double_and_int_checks
     } else if (value is int) {
-      return (generic ? _convertToFfiNumberWrapper(value) : NSNumber.alloc().initWithLong(value))
+      return (generic
+              ? _convertToFfiNumberWrapper(value)
+              : NSNumber.alloc().initWithLong(value))
           as T;
     } else if (value is Enum) {
       return (generic
@@ -176,7 +195,8 @@ class _PigeonFfiCodec {
       return NSString(value) as T;
     } else if (value is TypedData) {
       return _toPigeonTypedData(value) as T;
-    } else if (value is List<String> && _isTypeOrNullableType<NSMutableArray>(T)) {
+    } else if (value is List<String> &&
+        _isTypeOrNullableType<NSMutableArray>(T)) {
       final NSMutableArray res = NSMutableArray();
       for (final String entry in value) {
         res.addObject(writeValue<NSString>(entry, generic: true));
@@ -192,7 +212,8 @@ class _PigeonFfiCodec {
         );
       }
       return res as T;
-    } else if (value is Map<String, Object> && _isTypeOrNullableType<NSDictionary>(T)) {
+    } else if (value is Map<String, Object> &&
+        _isTypeOrNullableType<NSDictionary>(T)) {
       final NSMutableDictionary res = NSMutableDictionary();
       for (final MapEntry<String, Object> entry in value.entries) {
         res.setObject(
@@ -224,37 +245,67 @@ ffi_bridge.MessagesPigeonTypedData _toPigeonTypedData(TypedData value) {
     final int length = value.length;
     final Pointer<Uint8> ptr = calloc<Uint8>(length);
     ptr.asTypedList(length).setAll(0, value);
-    final NSData nsData = NSData.dataWithBytes(ptr.cast<Void>(), length: lengthInBytes);
+    final NSData nsData = NSData.dataWithBytes(
+      ptr.cast<Void>(),
+      length: lengthInBytes,
+    );
     calloc.free(ptr);
-    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(nsData, type: 0);
+    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(
+      nsData,
+      type: 0,
+    );
   } else if (value is Int32List) {
     final int length = value.length;
     final Pointer<Int32> ptr = calloc<Int32>(length);
     ptr.asTypedList(length).setAll(0, value);
-    final NSData nsData = NSData.dataWithBytes(ptr.cast<Void>(), length: lengthInBytes);
+    final NSData nsData = NSData.dataWithBytes(
+      ptr.cast<Void>(),
+      length: lengthInBytes,
+    );
     calloc.free(ptr);
-    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(nsData, type: 1);
+    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(
+      nsData,
+      type: 1,
+    );
   } else if (value is Int64List) {
     final int length = value.length;
     final Pointer<Int64> ptr = calloc<Int64>(length);
     ptr.asTypedList(length).setAll(0, value);
-    final NSData nsData = NSData.dataWithBytes(ptr.cast<Void>(), length: lengthInBytes);
+    final NSData nsData = NSData.dataWithBytes(
+      ptr.cast<Void>(),
+      length: lengthInBytes,
+    );
     calloc.free(ptr);
-    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(nsData, type: 2);
+    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(
+      nsData,
+      type: 2,
+    );
   } else if (value is Float32List) {
     final int length = value.length;
     final Pointer<Float> ptr = calloc<Float>(length);
     ptr.asTypedList(length).setAll(0, value);
-    final NSData nsData = NSData.dataWithBytes(ptr.cast<Void>(), length: lengthInBytes);
+    final NSData nsData = NSData.dataWithBytes(
+      ptr.cast<Void>(),
+      length: lengthInBytes,
+    );
     calloc.free(ptr);
-    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(nsData, type: 3);
+    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(
+      nsData,
+      type: 3,
+    );
   } else if (value is Float64List) {
     final int length = value.length;
     final Pointer<Double> ptr = calloc<Double>(length);
     ptr.asTypedList(length).setAll(0, value);
-    final NSData nsData = NSData.dataWithBytes(ptr.cast<Void>(), length: lengthInBytes);
+    final NSData nsData = NSData.dataWithBytes(
+      ptr.cast<Void>(),
+      length: lengthInBytes,
+    );
     calloc.free(ptr);
-    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(nsData, type: 4);
+    return ffi_bridge.MessagesPigeonTypedData.alloc().initWithData(
+      nsData,
+      type: 4,
+    );
   }
   throw ArgumentError.value(value);
 }
@@ -277,10 +328,18 @@ Object? _getValueFromPigeonTypedData(ffi_bridge.MessagesPigeonTypedData value) {
     final Pointer<Void> bytes = data.bytes;
     return switch (value.type) {
       0 => Uint8List.fromList(bytes.cast<Uint8>().asTypedList(lengthInBytes)),
-      1 => Int32List.fromList(bytes.cast<Int32>().asTypedList(lengthInBytes ~/ 4)),
-      2 => Int64List.fromList(bytes.cast<Int64>().asTypedList(lengthInBytes ~/ 8)),
-      3 => Float32List.fromList(bytes.cast<Float>().asTypedList(lengthInBytes ~/ 4)),
-      4 => Float64List.fromList(bytes.cast<Double>().asTypedList(lengthInBytes ~/ 8)),
+      1 => Int32List.fromList(
+        bytes.cast<Int32>().asTypedList(lengthInBytes ~/ 4),
+      ),
+      2 => Int64List.fromList(
+        bytes.cast<Int64>().asTypedList(lengthInBytes ~/ 8),
+      ),
+      3 => Float32List.fromList(
+        bytes.cast<Float>().asTypedList(lengthInBytes ~/ 4),
+      ),
+      4 => Float64List.fromList(
+        bytes.cast<Double>().asTypedList(lengthInBytes ~/ 8),
+      ),
       _ => throw ArgumentError.value(value),
     };
   } finally {
@@ -341,12 +400,16 @@ void _throwIfFfiError(ffi_bridge.PigeonError error) {
   }
 }
 
-PlatformException _wrapFfiError(ffi_bridge.PigeonError error) => PlatformException(
-  code: error.code!.toDartString(),
-  message: error.message?.toDartString(),
-  details: NSString.isA(error.details) ? error.details!.toDartString() : error.details,
-);
+PlatformException _wrapFfiError(ffi_bridge.PigeonError error) =>
+    PlatformException(
+      code: error.code!.toDartString(),
+      message: error.message?.toDartString(),
+      details: NSString.isA(error.details)
+          ? error.details!.toDartString()
+          : error.details,
+    );
 
+// ignore: unused_element
 void _reportFfiError(ffi_bridge.PigeonError errorOut, Object e) {
   if (e is PlatformException) {
     errorOut.code = NSString(e.code);
@@ -369,9 +432,8 @@ class SharedPreferencesPigeonOptions {
   }
 
   ffi_bridge.SharedPreferencesPigeonOptionsBridge toFfi() {
-    return ffi_bridge.SharedPreferencesPigeonOptionsBridge.alloc().initWithSuiteName(
-      _PigeonFfiCodec.writeValue<NSString?>(suiteName),
-    );
+    return ffi_bridge.SharedPreferencesPigeonOptionsBridge.alloc()
+        .initWithSuiteName(_PigeonFfiCodec.writeValue<NSString?>(suiteName));
   }
 
   Object encode() {
@@ -383,7 +445,9 @@ class SharedPreferencesPigeonOptions {
   ) {
     return ffiClass == null
         ? null
-        : SharedPreferencesPigeonOptions(suiteName: ffiClass.suiteName?.toDartString());
+        : SharedPreferencesPigeonOptions(
+            suiteName: ffiClass.suiteName?.toDartString(),
+          );
   }
 
   static SharedPreferencesPigeonOptions decode(Object result) {
@@ -394,7 +458,8 @@ class SharedPreferencesPigeonOptions {
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) {
-    if (other is! SharedPreferencesPigeonOptions || other.runtimeType != runtimeType) {
+    if (other is! SharedPreferencesPigeonOptions ||
+        other.runtimeType != runtimeType) {
       return false;
     }
     if (identical(this, other)) {
@@ -439,7 +504,8 @@ class _PigeonCodec extends StandardMessageCodec {
   }
 }
 
-const String defaultInstanceName = 'PigeonDefaultClassName32uh4ui3lh445uh4h3l2l455g4y34u';
+const String defaultInstanceName =
+    'PigeonDefaultClassName32uh4ui3lh445uh4h3l2l455g4y34u';
 
 class LegacyUserDefaultsApiForNativeInterop {
   LegacyUserDefaultsApiForNativeInterop._withRegistrar({
@@ -453,7 +519,9 @@ class LegacyUserDefaultsApiForNativeInterop {
     final LegacyUserDefaultsApiForNativeInterop res;
     if (Platform.isIOS || Platform.isMacOS) {
       final ffi_bridge.LegacyUserDefaultsApiSetup? link =
-          ffi_bridge.LegacyUserDefaultsApiSetup.getInstanceWithName(NSString(channelName));
+          ffi_bridge.LegacyUserDefaultsApiSetup.getInstanceWithName(
+            NSString(channelName),
+          );
       if (link == null) {
         _throwNoInstanceError(channelName);
       }
@@ -631,10 +699,16 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   Future<void> setBool(String key, bool value) async {
@@ -648,10 +722,16 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key, value]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, value],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   Future<void> setDouble(String key, double value) async {
@@ -665,10 +745,16 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key, value]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, value],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   Future<void> setValue(String key, Object value) async {
@@ -682,13 +768,22 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key, value]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, value],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
-  Future<Map<String, Object>> getAll(String prefix, List<String>? allowList) async {
+  Future<Map<String, Object>> getAll(
+    String prefix,
+    List<String>? allowList,
+  ) async {
     if (_nativeInteropApi != null) {
       return _nativeInteropApi.getAll(prefix, allowList);
     }
@@ -699,10 +794,9 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      prefix,
-      allowList,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[prefix, allowList],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
@@ -710,7 +804,8 @@ class LegacyUserDefaultsApi {
       pigeonVar_channelName,
       isNullValid: false,
     );
-    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object>();
+    return (pigeonVar_replyValue! as Map<Object?, Object?>)
+        .cast<String, Object>();
   }
 
   Future<bool> clear(String prefix, List<String>? allowList) async {
@@ -724,10 +819,9 @@ class LegacyUserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      prefix,
-      allowList,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[prefix, allowList],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
@@ -740,15 +834,18 @@ class LegacyUserDefaultsApi {
 }
 
 class UserDefaultsApiForNativeInterop {
-  UserDefaultsApiForNativeInterop._withRegistrar({ffi_bridge.UserDefaultsApiSetup? ffiApi})
-    : _ffiApi = ffiApi;
+  UserDefaultsApiForNativeInterop._withRegistrar({
+    ffi_bridge.UserDefaultsApiSetup? ffiApi,
+  }) : _ffiApi = ffiApi;
 
   /// Returns instance of UserDefaultsApiForNativeInterop with specified [channelName] if one has been registered.
-  static UserDefaultsApiForNativeInterop? getInstance({String channelName = defaultInstanceName}) {
+  static UserDefaultsApiForNativeInterop? getInstance({
+    String channelName = defaultInstanceName,
+  }) {
     final UserDefaultsApiForNativeInterop res;
     if (Platform.isIOS || Platform.isMacOS) {
-      final ffi_bridge.UserDefaultsApiSetup? link =
-          ffi_bridge.UserDefaultsApiSetup.getInstanceWithName(NSString(channelName));
+      final ffi_bridge.UserDefaultsApiSetup? link = ffi_bridge
+          .UserDefaultsApiSetup.getInstanceWithName(NSString(channelName));
       if (link == null) {
         _throwNoInstanceError(channelName);
       }
@@ -794,7 +891,10 @@ class UserDefaultsApiForNativeInterop {
     }
   }
 
-  Map<String, Object> getAll(List<String>? allowList, SharedPreferencesPigeonOptions options) {
+  Map<String, Object> getAll(
+    List<String>? allowList,
+    SharedPreferencesPigeonOptions options,
+  ) {
     if (_ffiApi != null) {
       final pigeonVar_error = ffi_bridge.PigeonError();
       final NSDictionary? pigeonVar_res = _ffiApi.getAllWithAllowList(
@@ -821,14 +921,19 @@ class UserDefaultsApiForNativeInterop {
         wrappedError: pigeonVar_error,
       );
       _throwIfFfiError(pigeonVar_error);
-      final Object? pigeonVar_dartTypeRes = _PigeonFfiCodec.readValue(pigeonVar_res);
+      final Object? pigeonVar_dartTypeRes = _PigeonFfiCodec.readValue(
+        pigeonVar_res,
+      );
       return pigeonVar_dartTypeRes;
     } else {
       throw Exception('No JNI or FFI api available');
     }
   }
 
-  List<String> getKeys(List<String>? allowList, SharedPreferencesPigeonOptions options) {
+  List<String> getKeys(
+    List<String>? allowList,
+    SharedPreferencesPigeonOptions options,
+  ) {
     if (_ffiApi != null) {
       final pigeonVar_error = ffi_bridge.PigeonError();
       final NSArray? pigeonVar_res = _ffiApi.getKeysWithAllowList(
@@ -838,7 +943,8 @@ class UserDefaultsApiForNativeInterop {
       );
       _throwIfFfiError(pigeonVar_error);
       final List<String> pigeonVar_dartTypeRes =
-          (_PigeonFfiCodec.readValue(pigeonVar_res)! as List<Object?>).cast<String>();
+          (_PigeonFfiCodec.readValue(pigeonVar_res)! as List<Object?>)
+              .cast<String>();
       return pigeonVar_dartTypeRes;
     } else {
       throw Exception('No JNI or FFI api available');
@@ -905,7 +1011,11 @@ class UserDefaultsApi {
   final UserDefaultsApiForNativeInterop? _nativeInteropApi;
 
   /// Adds property to shared preferences data set of type String.
-  Future<void> set(String key, Object value, SharedPreferencesPigeonOptions options) async {
+  Future<void> set(
+    String key,
+    Object value,
+    SharedPreferencesPigeonOptions options,
+  ) async {
     if (_nativeInteropApi != null) {
       return _nativeInteropApi.set(key, value, options);
     }
@@ -916,18 +1026,23 @@ class UserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      key,
-      value,
-      options,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, value, options],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Removes all properties from shared preferences data set with matching prefix.
-  Future<void> clear(List<String>? allowList, SharedPreferencesPigeonOptions options) async {
+  Future<void> clear(
+    List<String>? allowList,
+    SharedPreferencesPigeonOptions options,
+  ) async {
     if (_nativeInteropApi != null) {
       return _nativeInteropApi.clear(allowList, options);
     }
@@ -938,13 +1053,16 @@ class UserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      allowList,
-      options,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[allowList, options],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+    _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// Gets all properties from shared preferences data set with matching prefix.
@@ -962,10 +1080,9 @@ class UserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      allowList,
-      options,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[allowList, options],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
@@ -973,11 +1090,15 @@ class UserDefaultsApi {
       pigeonVar_channelName,
       isNullValid: false,
     );
-    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object>();
+    return (pigeonVar_replyValue! as Map<Object?, Object?>)
+        .cast<String, Object>();
   }
 
   /// Gets individual value stored with [key], if any.
-  Future<Object?> getValue(String key, SharedPreferencesPigeonOptions options) async {
+  Future<Object?> getValue(
+    String key,
+    SharedPreferencesPigeonOptions options,
+  ) async {
     if (_nativeInteropApi != null) {
       return _nativeInteropApi.getValue(key, options);
     }
@@ -988,7 +1109,9 @@ class UserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[key, options]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[key, options],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
@@ -1014,10 +1137,9 @@ class UserDefaultsApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
-      allowList,
-      options,
-    ]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[allowList, options],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
