@@ -1,6 +1,7 @@
 // mein erste Projekt, jetzt mit GitHub Repository-Anbindung.
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -11,6 +12,59 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final PageController _controller = PageController(initialPage: 0);
+  final _supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateFcmToken();
+
+    // Lauscht auf automatische Token-Änderungen von Firebase während die App läuft
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      _updateFcmTokenWithToken(newToken);
+    });
+  }
+
+  Future<void> _updateFcmToken() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance.getToken();
+      } catch (e) {
+        debugPrint('Konnte FCM Token beim Start nicht abrufen: $e');
+      }
+
+      fcmToken ??= 'simulator_fcm_token_${user.id}';
+
+      await _supabase.from('user_profiles').upsert({
+        'id': user.id,
+        'email': user.email,
+        'fcm_token': fcmToken,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Fehler beim Aktualisieren des FCM Tokens in MyHomePage: $e');
+    }
+  }
+
+  Future<void> _updateFcmTokenWithToken(String newToken) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      await _supabase.from('user_profiles').upsert({
+        'id': user.id,
+        'email': user.email,
+        'fcm_token': newToken,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Fehler beim Aktualisieren des neuen FCM Tokens: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
