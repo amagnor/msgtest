@@ -13,6 +13,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final PageController _controller = PageController(initialPage: 0);
   final _supabase = Supabase.instance.client;
+  RealtimeChannel? _notificationChannel;
 
   @override
   void initState() {
@@ -22,6 +23,74 @@ class _MyHomePageState extends State<MyHomePage> {
     // Lauscht auf automatische Token-Änderungen von Firebase während die App läuft
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
       _updateFcmTokenWithToken(newToken);
+    });
+
+    _setupRealtimeNotifications();
+    _setupFcmForegroundListener();
+  }
+
+  void _setupRealtimeNotifications() {
+    _notificationChannel = _supabase
+        .channel('public:notifications')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          callback: (payload) {
+            final newRecord = payload.newRecord;
+            final title = newRecord['title'] ?? 'Ziel erreicht!';
+            final message = newRecord['message'] ?? '';
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.stars, color: Colors.amber),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(message),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: const Color(0xFF1B263B),
+                  duration: const Duration(seconds: 5),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  void _setupFcmForegroundListener() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (mounted) {
+        final title = message.notification?.title ?? 'Ziel erreicht!';
+        final body = message.notification?.body ?? '';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$title: $body'),
+            backgroundColor: const Color(0xFF1B263B),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     });
   }
 
@@ -33,6 +102,8 @@ class _MyHomePageState extends State<MyHomePage> {
       String? fcmToken;
       try {
         fcmToken = await FirebaseMessaging.instance.getToken();
+        // FCM Topic abonnieren für Push Notifications
+        await FirebaseMessaging.instance.subscribeToTopic('all_users');
       } catch (e) {
         debugPrint('Konnte FCM Token beim Start nicht abrufen: $e');
       }
@@ -64,6 +135,15 @@ class _MyHomePageState extends State<MyHomePage> {
     } catch (e) {
       debugPrint('Fehler beim Aktualisieren des neuen FCM Tokens: $e');
     }
+  }
+
+  @override
+  void dispose() {
+    if (_notificationChannel != null) {
+      _supabase.removeChannel(_notificationChannel!);
+    }
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -112,6 +192,11 @@ class _DetailPageState extends State<DetailPage> {
   late final String _dateString;
   late final Stream<List<Map<String, dynamic>>> _dataStream;
 
+  // Maximalwerte als Konstanten definieren, damit UI und Logik immer übereinstimmen
+  static const double maxSchritte = 12.0;
+  static const double maxTrinken = 3.0;
+  static const double maxKalorien = 8.0;
+
   // Zustandsspeicher für die drei Werte dieser Seite
   int _schritte = 0;
   int _trinken = 0;
@@ -138,7 +223,12 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   // Universelle Funktion zum Hochzählen einer bestimmten Spalte
-  Future<void> _updateValue(String column, int currentValue) async {
+  Future<void> _updateValue(
+    String column,
+    int currentValue,
+    double maxVal,
+    String unit,
+  ) async {
     final newValue = currentValue + 1;
 
     try {
@@ -147,8 +237,41 @@ class _DetailPageState extends State<DetailPage> {
         'date': _dateString,
         column: newValue,
       });
+
+      // Prüfen, ob vMaxVal genau bei diesem Klick erreicht wurde
+      if (currentValue < maxVal && newValue >= maxVal) {
+        await _sendNotificationToOthers(column, newValue, maxVal, unit);
+      }
     } catch (e) {
       debugPrint('Fehler beim Speichern von $column: $e');
+    }
+  }
+
+  Future<void> _sendNotificationToOthers(
+    String category,
+    int value,
+    double maxVal,
+    String unit,
+  ) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      final email = user.email ?? 'Ein Benutzer';
+      final categoryName = category[0].toUpperCase() + category.substring(1);
+
+      // In Supabase 'notifications' Tabelle eintragen.
+      // Supabase Realtime sendet dies an alle verbundenen Nutzer (inkl. dem aktuellen Nutzer)
+      await _supabase.from('notifications').insert({
+        'sender_id': user.id,
+        'sender_email': email,
+        'title': '🎉 Ziel erreicht!',
+        'message':
+            '$email hat das Ziel für $categoryName (${maxVal.toInt()} $unit) erreicht!',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Fehler beim Senden der Benachrichtigung: $e');
     }
   }
 
@@ -195,9 +318,10 @@ class _DetailPageState extends State<DetailPage> {
                 vColor: const Color(0xFF072B61),
                 vIconData: Icons.directions_run,
                 vUnit: 'm',
-                vMaxVal: 5000.0,
+                vMaxVal: maxSchritte,
                 vCounter: _schritte,
-                onTap: () => _updateValue('schritte', _schritte),
+                onTap: () =>
+                    _updateValue('schritte', _schritte, maxSchritte, 'm'),
               ),
 
               // 2. Trinken (Spalte: trinken)
@@ -205,9 +329,10 @@ class _DetailPageState extends State<DetailPage> {
                 vColor: const Color(0xFFBA1818),
                 vIconData: Icons.local_drink,
                 vUnit: 'ml',
-                vMaxVal: 3,
+                vMaxVal: maxTrinken,
                 vCounter: _trinken,
-                onTap: () => _updateValue('trinken', _trinken),
+                onTap: () =>
+                    _updateValue('trinken', _trinken, maxTrinken, 'ml'),
               ),
 
               // 3. Kalorien (Spalte: kalorien)
@@ -215,9 +340,10 @@ class _DetailPageState extends State<DetailPage> {
                 vColor: const Color(0xFF66BA18),
                 vIconData: Icons.fastfood,
                 vUnit: 'kcal',
-                vMaxVal: 1800.0,
+                vMaxVal: maxKalorien,
                 vCounter: _kalorien,
-                onTap: () => _updateValue('kalorien', _kalorien),
+                onTap: () =>
+                    _updateValue('kalorien', _kalorien, maxKalorien, 'kcal'),
               ),
             ],
           ),
