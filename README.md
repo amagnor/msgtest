@@ -1,6 +1,6 @@
-# fitness
+# msgtest
 
-Fitness Projekt
+MsgTest Projekt
 
 ## Getting Started
 
