@@ -2,16 +2,22 @@
 
 MsgTest Projekt
 
-## Getting Started
+## Warum das Anmelden beim ersten Start notwendig ist:
+Dass der Benutzer sich nach einer Neuinstallation mindestens einmal anmelden muss, ist technisch genau richtig und gewollt:
 
-This project is a starting point for a Flutter application.
+1. **FCM-Token & Topic-Abonnement (`all_users`)**:
+   Beim ersten Login wird [`_updateFcmToken()`](file:///C:/Projekte/Flutter/msgtest/lib/scaffold.dart#L112) ausgeführt. Erst in diesem Moment:
+    - registriert sich die App bei den Google Play Services für Push-Benachrichtigungen,
+    - abonniert das FCM-Topic `all_users` (`FirebaseMessaging.instance.subscribeToTopic('all_users')`),
+    - verknüpft das FCM-Token mit dem Benutzerkonto in Supabase.
 
-A few resources to get you started if this is your first Flutter project:
+2. **System-Handling im Hintergrund / bei beendeter App**:
+   Sobald das Gerät beim Topic `all_users` registriert ist, übernimmt das Betriebssystem (Android / iOS) den Empfang der Push-Nachrichten direkt über die System-Dienste – ganz unabhängig davon, ob Ihre Flutter-App läuft, minimiert oder vollständig beendet ist.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+3. **Klick-Verarbeitung**:
+    - **App im Hintergrund**: `FirebaseMessaging.onMessageOpenedApp` holt die App nach vorne.
+    - **App beendet**: `FirebaseMessaging.instance.getInitialMessage()` liest beim Kaltstart der App die Daten der Benachrichtigung aus.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Resumee 
+Damit haben Sie eine vollständige, professionelle und lückenlose Push-Benachrichtigungs-Architektur mit Flutter, 
+Firebase FCM und Supabase aufgebaut!
