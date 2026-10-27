@@ -26,7 +26,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     _setupRealtimeNotifications();
-    _setupFcmForegroundListener();
+    _setupFcmListeners();
   }
 
   void _setupRealtimeNotifications() {
@@ -76,7 +76,8 @@ class _MyHomePageState extends State<MyHomePage> {
         .subscribe();
   }
 
-  void _setupFcmForegroundListener() {
+  void _setupFcmListeners() {
+    // 1. Vordergrund-Nachrichten (App ist aktiv und geöffnet)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (mounted) {
         final title = message.notification?.title ?? 'Ziel erreicht!';
@@ -92,6 +93,44 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       }
     });
+
+    // 2. App war im Hintergrund und wurde durch Tippen auf Push-Benachrichtigung geöffnet
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint(
+        'App aus dem Hintergrund durch Push-Benachrichtigung geöffnet',
+      );
+      _handleNotificationPayload(message);
+    });
+
+    // 3. App war vollständig beendet und wird durch Tippen auf Push-Benachrichtigung gestartet
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
+      if (message != null) {
+        debugPrint(
+          'App aus beendetem Zustand durch Push-Benachrichtigung gestartet',
+        );
+        _handleNotificationPayload(message);
+      }
+    });
+  }
+
+  void _handleNotificationPayload(RemoteMessage message) {
+    if (!mounted) return;
+    final title =
+        message.notification?.title ??
+        message.data['title'] ??
+        'Push-Benachrichtigung';
+    final body = message.notification?.body ?? message.data['body'] ?? '';
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Geöffnet: $title - $body'),
+        backgroundColor: const Color(0xFF2A9D8F),
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _updateFcmToken() async {
@@ -259,17 +298,28 @@ class _DetailPageState extends State<DetailPage> {
 
       final email = user.email ?? 'Ein Benutzer';
       final categoryName = category[0].toUpperCase() + category.substring(1);
+      final title = '🎉 Ziel erreicht!';
+      final message =
+          '$email hat das Ziel für $categoryName (${maxVal.toInt()} $unit) erreicht!';
 
-      // In Supabase 'notifications' Tabelle eintragen.
-      // Supabase Realtime sendet dies an alle verbundenen Nutzer (inkl. dem aktuellen Nutzer)
+      // 1. In Supabase 'notifications' Tabelle eintragen (für In-App Realtime UI)
       await _supabase.from('notifications').insert({
         'sender_id': user.id,
         'sender_email': email,
-        'title': '🎉 Ziel erreicht!',
-        'message':
-            '$email hat das Ziel für $categoryName (${maxVal.toInt()} $unit) erreicht!',
+        'title': title,
+        'message': message,
         'created_at': DateTime.now().toIso8601String(),
       });
+
+      // 2. Supabase Edge Function aufrufen (sendet FCM Push-Benachrichtigung an alle Geräte)
+      try {
+        await _supabase.functions.invoke(
+          'clever-processor',
+          body: {'topic': 'all_users', 'title': title, 'body': message},
+        );
+      } catch (e) {
+        debugPrint('Fehler beim Aufruf der Edge Function clever-processor: $e');
+      }
     } catch (e) {
       debugPrint('Fehler beim Senden der Benachrichtigung: $e');
     }

@@ -1,17 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:msgtest/scaffold.dart';
 import 'package:msgtest/login_screen.dart';
+
+/// Top-Level Handler für Firebase Push-Benachrichtigungen im Hintergrund / wenn App geschlossen ist
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Stellt sicher, dass Firebase initialisiert ist, bevor auf Nachrichten zugegriffen wird
+  await Firebase.initializeApp();
+  debugPrint(
+    'FCM Hintergrund-Nachricht empfangen [ID: ${message.messageId}]: ${message.notification?.title}',
+  );
+}
 
 Future<void> main() async {
   // Stellt sicher, dass die Flutter-Bindings vor der Initialisierung bereit sind
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. Hintergrund-Handler VOR Firebase-Initialisierung / runApp registrieren
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   try {
     await Firebase.initializeApp();
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
+  }
+
+  // 2. Benachrichtigungs-Berechtigungen anfordern (Android 13+ & iOS)
+  try {
+    final messaging = FirebaseMessaging.instance;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    debugPrint('FCM Berechtigungsstatus: ${settings.authorizationStatus}');
+
+    // Vorzeigeeinstellungen für den Vordergrund (iOS)
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  } catch (e) {
+    debugPrint('FCM Berechtigung konnte nicht angefordert werden: $e');
   }
 
   // Supabase mit Ihren Anmeldedaten initialisieren
