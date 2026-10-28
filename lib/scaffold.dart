@@ -1,11 +1,8 @@
 // mein erste Projekt, jetzt mit GitHub Repository-Anbindung.
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'package:msgtest/fcm.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -22,11 +19,11 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _updateFcmToken();
+    saveFcmTokenAndDeviceInfo();
 
     // Lauscht auf automatische Token-Änderungen von Firebase während die App läuft
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-      _updateFcmTokenWithToken(newToken);
+      updateFcmTokenWithToken(newToken);
     });
 
     _setupRealtimeNotifications();
@@ -135,92 +132,6 @@ class _MyHomePageState extends State<MyHomePage> {
         behavior: SnackBarBehavior.floating,
       ),
     );
-  }
-
-  Future<Map<String, String>> _getDeviceInfo() async {
-    final deviceInfoPlugin = DeviceInfoPlugin();
-    String deviceType = 'Unknown';
-    String osVersion = 'Unknown';
-    String deviceName = 'Unknown';
-
-    try {
-      if (!kIsWeb && Platform.isAndroid) {
-        final info = await deviceInfoPlugin.androidInfo;
-        deviceType = 'Android';
-        osVersion =
-            'Android ${info.version.release} (API ${info.version.sdkInt})';
-        deviceName = '${info.manufacturer} ${info.model}';
-      } else if (!kIsWeb && Platform.isIOS) {
-        final info = await deviceInfoPlugin.iosInfo;
-        deviceType = 'iOS';
-        osVersion = 'iOS ${info.systemVersion}';
-        deviceName = '${info.modelName} (${info.utsname.machine})';
-      } else if (kIsWeb) {
-        deviceType = 'Web';
-        osVersion = 'Web Browser';
-        deviceName = 'Web Client';
-      }
-    } catch (e) {
-      debugPrint('Fehler beim Abrufen der Geräteinformationen: $e');
-    }
-
-    return {
-      'device_type': deviceType,
-      'os_version': osVersion,
-      'device_name': deviceName,
-    };
-  }
-
-  Future<void> _updateFcmToken() async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return;
-
-      String? fcmToken;
-      try {
-        fcmToken = await FirebaseMessaging.instance.getToken();
-        // FCM Topic abonnieren für Push Notifications
-        await FirebaseMessaging.instance.subscribeToTopic('all_users');
-      } catch (e) {
-        debugPrint('Konnte FCM Token beim Start nicht abrufen: $e');
-      }
-
-      fcmToken ??= 'simulator_fcm_token_${user.id}';
-      final deviceInfo = await _getDeviceInfo();
-
-      await _supabase.from('user_profiles').upsert({
-        'id': user.id,
-        'email': user.email,
-        'fcm_token': fcmToken,
-        'device_type': deviceInfo['device_type'],
-        'os_version': deviceInfo['os_version'],
-        'device_name': deviceInfo['device_name'],
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Fehler beim Aktualisieren des FCM Tokens in MyHomePage: $e');
-    }
-  }
-
-  Future<void> _updateFcmTokenWithToken(String newToken) async {
-    try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return;
-
-      final deviceInfo = await _getDeviceInfo();
-
-      await _supabase.from('user_profiles').upsert({
-        'id': user.id,
-        'email': user.email,
-        'fcm_token': newToken,
-        'device_type': deviceInfo['device_type'],
-        'os_version': deviceInfo['os_version'],
-        'device_name': deviceInfo['device_name'],
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      debugPrint('Fehler beim Aktualisieren des neuen FCM Tokens: $e');
-    }
   }
 
   @override
