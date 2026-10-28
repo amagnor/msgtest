@@ -12,12 +12,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   bool _isSignUp = false;
   bool _isVerificationStep = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
   String? _successMessage;
   String? _pendingEmail;
@@ -28,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _otpController.dispose();
     super.dispose();
   }
@@ -252,6 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isSignUp = false;
                             _errorMessage = null;
                             _successMessage = null;
+                            _confirmPasswordController.clear();
                           });
                         },
                         child: const Text(
@@ -293,13 +297,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         style: const TextStyle(color: Colors.white),
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           labelText: 'Passwort',
                           labelStyle: const TextStyle(color: Colors.white70),
                           prefixIcon: const Icon(
                             Icons.lock,
                             color: Colors.greenAccent,
+                          ),
+                          suffixIcon: GestureDetector(
+                            onTapDown: (_) =>
+                                setState(() => _obscurePassword = false),
+                            onTapUp: (_) =>
+                                setState(() => _obscurePassword = true),
+                            onTapCancel: () =>
+                                setState(() => _obscurePassword = true),
+                            child: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.white70,
+                            ),
                           ),
                           filled: true,
                           fillColor: const Color(0xFF0D1B2A),
@@ -314,6 +332,39 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
+
+                      if (_isSignUp) ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          style: const TextStyle(color: Colors.white),
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: 'Passwort bestätigen',
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: Colors.greenAccent,
+                            ),
+                            filled: true,
+                            fillColor: const Color(0xFF0D1B2A),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (!_isSignUp) return null;
+                            if (value == null || value.isEmpty) {
+                              return 'Bitte das Passwort wiederholen';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Die Passwörter stimmen nicht überein';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+
                       const SizedBox(height: 24),
 
                       // Submit Button
@@ -352,6 +403,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _isSignUp = !_isSignUp;
                             _errorMessage = null;
                             _successMessage = null;
+                            _confirmPasswordController.clear();
                           });
                         },
                         child: Text(
