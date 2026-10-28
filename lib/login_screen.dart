@@ -1,6 +1,10 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -121,6 +125,40 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<Map<String, String>> _getDeviceInfo() async {
+    final deviceInfoPlugin = DeviceInfoPlugin();
+    String deviceType = 'Unknown';
+    String osVersion = 'Unknown';
+    String deviceName = 'Unknown';
+
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        final info = await deviceInfoPlugin.androidInfo;
+        deviceType = 'Android';
+        osVersion =
+            'Android ${info.version.release} (API ${info.version.sdkInt})';
+        deviceName = '${info.manufacturer} ${info.model}';
+      } else if (!kIsWeb && Platform.isIOS) {
+        final info = await deviceInfoPlugin.iosInfo;
+        deviceType = 'iOS';
+        osVersion = 'iOS ${info.systemVersion}';
+        deviceName = '${info.modelName} (${info.utsname.machine})';
+      } else if (kIsWeb) {
+        deviceType = 'Web';
+        osVersion = 'Web Browser';
+        deviceName = 'Web Client';
+      }
+    } catch (e) {
+      debugPrint('Fehler beim Abrufen der Geräteinformationen: $e');
+    }
+
+    return {
+      'device_type': deviceType,
+      'os_version': osVersion,
+      'device_name': deviceName,
+    };
+  }
+
   Future<void> _saveFcmTokenToDatabase() async {
     try {
       final user = _supabase.auth.currentUser;
@@ -135,12 +173,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Fallback für Simulator/Emulator, falls kein FCM-Token generiert werden konnte
       fcmToken ??= 'simulator_fcm_token_${user.id}';
+      final deviceInfo = await _getDeviceInfo();
 
       // In die 'user_profiles' Tabelle speichern (Upsert)
       await _supabase.from('user_profiles').upsert({
         'id': user.id,
         'email': user.email,
         'fcm_token': fcmToken,
+        'device_type': deviceInfo['device_type'],
+        'os_version': deviceInfo['os_version'],
+        'device_name': deviceInfo['device_name'],
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {

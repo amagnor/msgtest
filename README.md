@@ -21,3 +21,8 @@ Dass der Benutzer sich nach einer Neuinstallation mindestens einmal anmelden mus
 ## Resumee 
 Damit haben Sie eine vollständige, professionelle und lückenlose Push-Benachrichtigungs-Architektur mit Flutter, 
 Firebase FCM und Supabase aufgebaut!
+
+## Testuser mit Micmou03
+- Pixel 5: andreas.magnor@gmx.de
+- Pixel 10: andreas@magnorberlin.de 
+- Huawai: outdoorprofi@gmx.de  
